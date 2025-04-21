@@ -8,7 +8,10 @@
 # with it. Though you can probably just translate this to any given programming
 # language.
 
+# This is a Bidirectional Wrap-Around Maze
+
 import random
+import pyray as rl
 
 class Cell:
     # By default the connections list being empty means the cell has "walls"
@@ -71,8 +74,22 @@ class Maze:
             self.remove_wall(current_cell, neighbor_cell)
             self.__generate(neighbor_cell[1])
 
-    def remove_wall(self, current_cell, neighbor_cell):
-        current_cell.add_connection(neighbor_cell[0], neighbor_cell[1])
+    def remove_wall(self, current_cell, neighbor_cell_tuple):
+        direction = neighbor_cell_tuple[0]
+        neighbor_cell = neighbor_cell_tuple[1]
+        # Adding connections to both cells makes them actually bidirectional
+        current_cell.add_connection(direction, neighbor_cell)
+        neighbor_cell.add_connection(self.__opposite_direction(direction), current_cell)
+
+    def __opposite_direction(self, direction):
+        if direction == "up":
+            return "down"
+        elif direction == "down":
+            return "up"
+        elif direction == "left":
+            return "right"
+        elif direction == "right":
+            return "left"
 
     def choose_random_neighbor(self, cell):
         up = ("up", self.grid[(cell.y - 1) % self.rows][cell.x])
@@ -113,13 +130,53 @@ class Maze:
         return grid
 
     def dump(self):
-        for i in range(self.rows):
-            for j in range(self.cols):
-                print(self.grid[i][j])
+        for row in range(self.rows):
+            for col in range(self.cols):
+                print(self.grid[row][col])
 
-# TODO Missing a render method for visualizing.
-                
-m = Maze(3, 3)
+    def render(self, line_thickness=5.0):
+        for row in range(self.rows):
+            for col in range(self.cols):
+                cell = self.grid[row][col]
+                rl.draw_rectangle(cell.x * 40, cell.y * 40, 39, 39, rl.WHITE);
+                for connection in cell.connections:
+                    direction = connection[0]
+                    center_x = cell.x * 40 + 20
+                    center_y = cell.y * 40 + 20
+                    if direction == "up":
+                        startPos = rl.Vector2(center_x, center_y)
+                        endPos = rl.Vector2(center_x, center_y - 20)
+                        rl.draw_line_ex(startPos, endPos, line_thickness, rl.RED)
+                    elif direction == "down":
+                        startPos = rl.Vector2(center_x, center_y)
+                        endPos = rl.Vector2(center_x, center_y + 20)
+                        rl.draw_line_ex(startPos, endPos, line_thickness, rl.RED)
+                    elif direction == "left":
+                        startPos = rl.Vector2(center_x, center_y)
+                        endPos = rl.Vector2(center_x - 20, center_y)
+                        rl.draw_line_ex(startPos, endPos, line_thickness, rl.RED)
+                    elif direction == "right":
+                        startPos = rl.Vector2(center_x, center_y)
+                        endPos = rl.Vector2(center_x + 20, center_y)
+                        rl.draw_line_ex(startPos, endPos, line_thickness, rl.RED)
+
+
+# make it work for any maze sizes like 3x4 or 5x9
+# and find the perfect scale and width and height for that
+# make a good way to choose the end cell (MAKE THE END THE MIDDLE FOR AVODING THE
+# previous PROBLEM ABOUT GETTING TO THE END TOO EASY)
+#m = Maze(3, 3)
+m = Maze(15, 15)
 m.generate()
-m.dump()
-# remove duplicate connections at the end.
+#m.dump()
+# for 3x3 each cell is 200px by 200px
+# for 15x15 each cell is 40px by 40px
+
+rl.init_window(600, 600, "Maze")
+while not rl.window_should_close():
+    rl.begin_drawing()
+    rl.clear_background(rl.BLACK)
+    m.render(line_thickness=5)
+    rl.end_drawing()
+
+rl.close_window()
